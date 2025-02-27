@@ -1,6 +1,8 @@
 # HV Scan Analysis Script
 
-This repository contains a Python script for analyzing High Voltage (HV) scan data. The script reads data from CSV files, filters it based on user input, and performs various calculations and visualizations. It is designed to work with data from multiple stations and supports features like reduced field calculations, efficiency analysis, and streamer percentage tracking.
+This repository contains a Python script for analyzing High Voltage (HV) scan data for the miniTRASGO cosmic ray monitoring network.
+
+The script downloads updated in real time CSV files, filters them based on user input, and performs various calculations and visualizations. It is designed to work with data from multiple stations and supports features like reduced field calculations, efficiency analysis, and streamer percentage tracking.
 
 ## Table of Contents
 - [Features](#features)
