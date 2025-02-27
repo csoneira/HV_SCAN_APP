@@ -63,10 +63,12 @@ HV_SCAN_APP/
 
 ## Usage
 
+
 Run the script from the command line from inside the HV_SCAN_APP directory:
       ```bash
       python3 hv_scan_analysis.py
       ```
+      
 ---
 
 ### User Inputs
