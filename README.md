@@ -37,6 +37,7 @@ HV_SCAN_APP/
 ├── CONFIG/                        # Configuration files
 │   └── drive_links.txt            # File containing Google Drive links for data
 ├── hv_scan_analysis.py            # Main analysis script
+├── requirements.list              # Package requirements
 ├── README.md                      # This file
 └── LICENSE                        # GNU General Public License v3.0
 ```
@@ -52,13 +53,13 @@ HV_SCAN_APP/
 ### Steps
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/HV_SCAN_APP.git
+   git clone https://github.com/csoneira/HV_SCAN_APP.git
    cd HV_SCAN_APP
    ```
 
-2. Install the required Python packages:
+2. Install dependencies using:
    ```bash
-   pip install numpy pandas matplotlib gdown
+   pip install -r requirements.list
    ```
 
 3. Ensure the `DATA` and `CONFIG` directories are set up correctly:
@@ -92,15 +93,9 @@ python hv_scan_analysis.py
 ## Configuration
 
 ### `drive_links.txt`
-This file contains Google Drive links for downloading station-specific data. Each line should be formatted as:
-```
-station_number URL
-```
-Example:
-```
-1 https://drive.google.com/example-link-for-station-1
-2 https://drive.google.com/example-link-for-station-2
-```
+This file contains Google Drive links for downloading station-specific data.
+
+---
 
 ### Data Files
 - Data files should be placed in the `DATA/MINGO0X/` directories, where `X` is the station number.
@@ -117,13 +112,6 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
-
----
-
-## Acknowledgments
-
-- This script was developed for analyzing HV scan data in experimental physics.
-- Special thanks to the developers of `numpy`, `pandas`, `matplotlib`, and `gdown` for their excellent libraries.
 
 ---
 
