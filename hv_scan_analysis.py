@@ -9,6 +9,20 @@ Created on Mon Jun 24 19:02:22 2024
 @author: gfn
 """
 
+# A header to print and act as a CLI
+print("""
++-------------------------------------------------------------------+
+|                                                                   |
+|  HV Scan Analysis Script                                          |
+|                                                                   |
+|  This script reads the HV scan data from a CSV file, filters the  |
+|  data based on the user input, and performs various calculations  |
+|  and visualizations.                                              |
+|                                                                   |
++-------------------------------------------------------------------+
+""")
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -56,9 +70,14 @@ end_date_str = get_input("Enter end date (YYYY-MM-DD HH:MM:SS)", "2025-02-26 00:
 # Reduced field selection
 reduced_field = get_boolean_input("Enable reduced field? (Yes/No)", True)
 
+plot_vs_hv = get_boolean_input("Plot vs HV? (Yes/No)", True)
+plot_vs_time = get_boolean_input("Plot vs Time? (Yes/No)", True)
+hv_vs_time = get_boolean_input("HV vs Time? (Yes/No)", True)
+
 # HV step size
 hv_step_size = get_input("Enter the HV step size", "0.01")
 
+print()
 
 # Convert dates to pandas datetime format
 start_date = pd.to_datetime(start_date_str, format='%Y-%m-%d %H:%M:%S')
@@ -98,6 +117,7 @@ def check_file_status(data_file):
 # -----------------------------------------------------------------------------
 # Download the file from Google Drive -----------------------------------------
 # -----------------------------------------------------------------------------
+
 def download_file(station_number):
     """Download the file for the given station number from Google Drive."""
     file_links = {}
@@ -105,7 +125,7 @@ def download_file(station_number):
         # config_file_path = 
         with open("/home/cayesoneira/HV_SCAN_APP/CONFIG/drive_links.txt", "r") as f:
             for line in f:
-                print(line)
+                # print(line)
                 parts = line.strip().split()  # Split by spaces
                 if len(parts) > 1:  # Ensure the line is valid
                     station = int(parts[0])  # First column is the station number
@@ -145,13 +165,14 @@ if download:
     download_file(station_number)
 
 # Print execution details
-print(f"\nUsing data file: {data_file}")
-print(f"Start Date: {start_date}")
-print(f"End Date: {end_date}")
-print(f"Reduced field enabled: {reduced_field}")
+# print(f"\nUsing data file: {data_file}")
+# print(f"Start Date: {start_date}")
+# print(f"End Date: {end_date}")
+# print(f"Reduced field enabled: {reduced_field}")
 
 # Load the selected data file
-print("Loading data...")
+print()
+
 try:
     data_df = pd.read_csv(data_file)
 except Exception as e:
@@ -165,8 +186,9 @@ data_df['Time'] = pd.to_datetime(data_df['Time'].str.strip('"'), format='%Y-%m-%
 # Filter data within the time range
 data_df = data_df[(data_df['Time'] >= start_date) & (data_df['Time'] <= end_date)]
 
-print("Data loaded and filtered successfully!")
+print("Data loaded and filtered by date successfully!")
 
+# data_df["hv_mean"] = data_df["hv_mean"].round(2)
 
 # -----------------------------------------------------------------------------
 # Starting calculations -------------------------------------------------------
@@ -178,9 +200,6 @@ numeric_cols = [
     'eff_global', 'unc_eff_global', 'count', 'pressure_lab', 'sensors_int_Temperature_int',
     'final_eff_1', 'final_eff_2', 'final_eff_3', 'final_eff_4', 'CRT_avg_mean'
 ]
-
-# -----------------------------------------------------------------------------------------------
-
 
 data_df["t_in_K"] = data_df["sensors_int_Temperature_int"] + 273.15
 data_df["p_in_Pa"] = data_df["pressure_lab"] * 1000
@@ -202,7 +221,6 @@ else:
     step_size = hv_step_size
     label_hv = "HV"
     units_hv = "(kV)"
-
 
 # Check if CRT_avg exists in the data_grouped columns
 crt_avg = data_grouped.get('CRT_avg_mean', None)
@@ -237,11 +255,20 @@ hv_bin_centers = (hv_bins[:-1] + hv_bins[1:]) / 2
 
 # Function to perform binning and averaging
 def bin_and_average(hv, values):
-    binned_values = np.zeros(len(hv_bin_centers))
+    binned_values = np.zeros(len(hv_bin_centers))  # Initialize the output array
     for i in range(len(hv_bin_centers)):
+        # Find values within the current bin
         in_bin = (hv >= hv_bins[i]) & (hv < hv_bins[i + 1])
-        binned_values[i] = np.nanmean(values[in_bin]) if np.any(in_bin) else np.nan
-        # Use nanmean to handle NaNs
+        valid_values = values[in_bin]
+        
+        # Check if there are any valid (non-NaN) values in the bin
+        if np.any(~np.isnan(valid_values)):
+            binned_values[i] = np.nanmean(valid_values)  # Compute the mean, ignoring NaNs
+        else:
+            # This happens because during a HV scan only discrete values of HV are taken
+            # print(hv_bins[i], hv_bins[i + 1])
+            binned_values[i] = np.nan  # If no valid values, set to NaN
+    
     return binned_values
 
 # Smooth data for each series by averaging over bins
@@ -262,61 +289,61 @@ mean_count_over_eff_smooth = np.nanmean(count_over_efficiency_smooth)
 normalized_count_smooth = (count_smooth - mean_count_smooth) / mean_count_smooth
 normalized_count_over_eff_smooth = (count_over_efficiency_smooth - mean_count_over_eff_smooth) / mean_count_over_eff_smooth
 
-# Create subplots, adding one more if CRT_avg exists
-n_plots = 4
-fig, axs = plt.subplots(n_plots, 1, figsize=(10, 12), sharex=True)
+if plot_vs_hv:
+    # Create subplots, adding one more if CRT_avg exists
+    fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-# Plot 1: Efficiency of each plane (if the efficiency columns exist)
-axs[0].set_ylabel('Efficiency')
-if efficiency_M1 is not None:
-    axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M1), label='Efficiency P1', color='blue')
-if efficiency_M2 is not None:
-    axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M2), label='Efficiency P2', color='orange')
-if efficiency_M3 is not None:
-    axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M3), label='Efficiency P3', color='green')
-if efficiency_M4 is not None:
-    axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M4), label='Efficiency P4', color='red')
-axs[0].legend()
-axs[0].set_ylim(None,1)
-axs[0].grid(True)
-axs[0].set_title(f'Efficiency of Each Plane vs {label_hv}')
+    # Plot 1: Efficiency of each plane (if the efficiency columns exist)
+    axs[0].set_ylabel('Efficiency')
+    if efficiency_M1 is not None:
+        axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M1), label='Efficiency P1', color='blue')
+    if efficiency_M2 is not None:
+        axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M2), label='Efficiency P2', color='orange')
+    if efficiency_M3 is not None:
+        axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M3), label='Efficiency P3', color='green')
+    if efficiency_M4 is not None:
+        axs[0].scatter(hv_bin_centers, bin_and_average(hv, efficiency_M4), label='Efficiency P4', color='red')
+    axs[0].legend()
+    axs[0].set_ylim(None,1)
+    axs[0].grid(True)
+    axs[0].set_title(f'Efficiency of Each Plane vs {label_hv}')
 
-# Plot 3: Streamer Percentages vs HV
-axs[1].set_ylabel('Streamer %', color='tab:blue')
-axs[1].scatter(hv_bin_centers, streamer_percentage_M1_smooth, label='Streamer P1', color='blue')
-axs[1].scatter(hv_bin_centers, streamer_percentage_M2_smooth, label='Streamer P2', color='orange', linestyle='--')
-axs[1].scatter(hv_bin_centers, streamer_percentage_M3_smooth, label='Streamer P3', color='green', linestyle='-.')
-axs[1].scatter(hv_bin_centers, streamer_percentage_M4_smooth, label='Streamer P4', color='red', linestyle=':')
-axs[1].legend(loc='upper left')
-axs[1].grid(True)
-axs[1].set_title(f'Streamer % vs {label_hv}')
+    # Plot 3: Streamer Percentages vs HV
+    axs[1].set_ylabel('Streamer %', color='tab:blue')
+    axs[1].scatter(hv_bin_centers, streamer_percentage_M1_smooth, label='Streamer P1', color='blue')
+    axs[1].scatter(hv_bin_centers, streamer_percentage_M2_smooth, label='Streamer P2', color='orange', linestyle='--')
+    axs[1].scatter(hv_bin_centers, streamer_percentage_M3_smooth, label='Streamer P3', color='green', linestyle='-.')
+    axs[1].scatter(hv_bin_centers, streamer_percentage_M4_smooth, label='Streamer P4', color='red', linestyle=':')
+    axs[1].legend(loc='upper left')
+    axs[1].grid(True)
+    axs[1].set_title(f'Streamer % vs {label_hv}')
 
-# Plot 4: Pressure and Temperature vs HV
-axs[2].set_ylabel('Pressure (Lab)', color='tab:orange')
-axs[2].scatter(hv_bin_centers, pressure_lab_smooth, label='Pressure', color='orange')
-axs[2].tick_params(axis='y', labelcolor='tab:orange')
-# Add second y-axis for temperature
-ax_temp = axs[2].twinx()
-ax_temp.set_ylabel('Temperature (Lab)', color='tab:red')
-ax_temp.scatter(hv_bin_centers, temp_lab_smooth, label='Temperature', color='red')
-ax_temp.tick_params(axis='y', labelcolor='tab:red')
-axs[2].grid(True)
-axs[2].set_title(f'Pressure and Temperature vs {label_hv}')
+    # Plot 4: Pressure and Temperature vs HV
+    axs[2].set_ylabel('Pressure (Lab)', color='tab:orange')
+    axs[2].scatter(hv_bin_centers, pressure_lab_smooth, label='Pressure', color='orange')
+    axs[2].tick_params(axis='y', labelcolor='tab:orange')
+    # Add second y-axis for temperature
+    ax_temp = axs[2].twinx()
+    ax_temp.set_ylabel('Temperature (Lab)', color='tab:red')
+    ax_temp.scatter(hv_bin_centers, temp_lab_smooth, label='Temperature', color='red')
+    ax_temp.tick_params(axis='y', labelcolor='tab:red')
+    axs[2].grid(True)
+    axs[2].set_title(f'Pressure and Temperature vs {label_hv}')
 
-# axs[3].scatter(hv_bin_centers, hv_bin_centers, label='CRT Avg', color='purple')
-axs[3].scatter(hv_bin_centers, bin_and_average(hv, crt_avg) * 1000, label='CRT', color='purple')
-axs[3].set_ylabel('Timing uncertainty (ps)')
-axs[3].grid(True)
-axs[3].legend()
-axs[3].set_title(f'CRT (ps) vs {label_hv}')
+    # axs[3].scatter(hv_bin_centers, hv_bin_centers, label='CRT Avg', color='purple')
+    axs[3].scatter(hv_bin_centers, bin_and_average(hv, crt_avg) * 1000, label='CRT', color='purple')
+    axs[3].set_ylabel('Timing uncertainty (ps)')
+    axs[3].grid(True)
+    axs[3].legend()
+    axs[3].set_title(f'CRT (ps) vs {label_hv}')
 
-# Set common x-axis label
-axs[-1].set_xlabel(f'{label_hv} {units_hv}')
-axs[-1].set_xlim(hv_min, hv_max)
+    # Set common x-axis label
+    axs[-1].set_xlabel(f'{label_hv} {units_hv}')
+    axs[-1].set_xlim(hv_min, hv_max)
 
-# Adjust layout
-plt.tight_layout()
-# plt.show()
+    # Adjust layout
+    plt.tight_layout()
+    # plt.show()
 
 # %%
 
@@ -339,88 +366,106 @@ data_resampled = data_df[selected_cols].resample("1min").mean()
 # -----------------------------------------------------------------------------
 # Multi-Plot with Proper Groupings --------------------------------------------
 # -----------------------------------------------------------------------------
-fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-colors = ['blue', 'orange', 'green', 'red']
+if plot_vs_time:
+    fig, axs = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
 
-# **Plot all Efficiencies in One Plot (Blue, Orange, Green, Red)**
-for i, col in enumerate(efficiency_cols):
-    if col in data_resampled:
-        axs[0].plot(data_resampled.index, data_resampled[col], label=col, color=colors[i], marker="o", linestyle="-")
-axs[0].set_ylabel("Efficiency")
-axs[0].legend()
-axs[0].grid(True)
-axs[0].set_ylim(0, 1)
-axs[0].set_title("Efficiencies Over Time")
+    colors = ['blue', 'orange', 'green', 'red']
 
-# **Plot all Streamer Percentages in One Plot (Blue, Orange, Green, Red)**
+    # **Plot all Efficiencies in One Plot (Blue, Orange, Green, Red)**
+    for i, col in enumerate(efficiency_cols):
+        if col in data_resampled:
+            axs[0].plot(data_resampled.index, data_resampled[col], label=col, color=colors[i], marker="o", linestyle="-")
+    axs[0].set_ylabel("Efficiency")
+    axs[0].legend()
+    axs[0].grid(True)
+    axs[0].set_ylim(0, 1)
+    axs[0].set_title("Efficiencies Over Time")
 
-for i, col in enumerate(streamer_cols):
-    if col in data_resampled:
-        axs[1].plot(data_resampled.index, data_resampled[col], label=col, color=colors[i], marker="o", linestyle="-")
-axs[1].set_ylabel("Streamer %")
-axs[1].legend()
-axs[1].grid(True)
-axs[1].set_title("Streamer Percentages Over Time")
+    # **Plot all Streamer Percentages in One Plot (Blue, Orange, Green, Red)**
 
-# **Dual Y-Axis Plot: Pressure & Temperature (Orange, Red)**
-ax_temp = axs[2].twinx()  # Create a second y-axis
+    for i, col in enumerate(streamer_cols):
+        if col in data_resampled:
+            axs[1].plot(data_resampled.index, data_resampled[col], label=col, color=colors[i], marker="o", linestyle="-")
+    axs[1].set_ylabel("Streamer %")
+    axs[1].legend()
+    axs[1].grid(True)
+    axs[1].set_title("Streamer Percentages Over Time")
 
-# Plot Pressure on primary y-axis
-if pressure_col in data_resampled:
-    axs[2].plot(data_resampled.index, data_resampled[pressure_col], label="Pressure", color='orange', marker="o", linestyle="-")
-    axs[2].set_ylabel("Pressure (Lab)", color='orange')
-    axs[2].tick_params(axis='y', labelcolor='orange')
+    # **Dual Y-Axis Plot: Pressure & Temperature (Orange, Red)**
+    ax_temp = axs[2].twinx()  # Create a second y-axis
 
-# Plot Temperature on secondary y-axis
-if temperature_col in data_resampled:
-    ax_temp.plot(data_resampled.index, data_resampled[temperature_col], label="Temperature", color='red', marker="o", linestyle="-")
-    ax_temp.set_ylabel("Temperature (Lab)", color='red')
-    ax_temp.tick_params(axis='y', labelcolor='red')
+    # Plot Pressure on primary y-axis
+    if pressure_col in data_resampled:
+        axs[2].plot(data_resampled.index, data_resampled[pressure_col], label="Pressure", color='orange', marker="o", linestyle="-")
+        axs[2].set_ylabel("Pressure (Lab)", color='orange')
+        axs[2].tick_params(axis='y', labelcolor='orange')
 
-axs[2].set_title("Pressure and Temperature Over Time")
-axs[2].grid(True)
+    # Plot Temperature on secondary y-axis
+    if temperature_col in data_resampled:
+        ax_temp.plot(data_resampled.index, data_resampled[temperature_col], label="Temperature", color='red', marker="o", linestyle="-")
+        ax_temp.set_ylabel("Temperature (Lab)", color='red')
+        ax_temp.tick_params(axis='y', labelcolor='red')
 
-# **Plot CRT (Purple)**
-if crt_col in data_resampled:
-    axs[3].plot(data_resampled.index, data_resampled[crt_col] * 1000, label="CRT (ps)", color='purple', marker="o", linestyle="-")
-    axs[3].set_ylabel("CRT (ps)", color='purple')
-    axs[3].grid(True)
-    axs[3].legend()
-    axs[3].set_title("CRT Over Time")
+    axs[2].set_title("Pressure and Temperature Over Time")
+    axs[2].grid(True)
 
-# # **Plot Rate (Blue)**
-# if rate_col in data_resampled:
-#     axs[4].plot(data_resampled.index, data_resampled[rate_col], label="Rate", color='blue', marker="o", linestyle="-")
-#     axs[4].set_ylabel("Rate")
-#     axs[4].grid(True)
-#     axs[4].legend()
-#     axs[4].set_title("Rate Over Time")
+    # **Plot CRT (Purple)**
+    if crt_col in data_resampled:
+        axs[3].plot(data_resampled.index, data_resampled[crt_col] * 1000, label="CRT (ps)", color='purple', marker="o", linestyle="-")
+        axs[3].set_ylabel("CRT (ps)", color='purple')
+        axs[3].grid(True)
+        axs[3].legend()
+        axs[3].set_title("CRT Over Time")
 
-# Set x-axis label and format
-axs[-1].set_xlabel("Time")
+    # # **Plot Rate (Blue)**
+    # if rate_col in data_resampled:
+    #     axs[4].plot(data_resampled.index, data_resampled[rate_col], label="Rate", color='blue', marker="o", linestyle="-")
+    #     axs[4].set_ylabel("Rate")
+    #     axs[4].grid(True)
+    #     axs[4].legend()
+    #     axs[4].set_title("Rate Over Time")
 
-# Adjust layout and show plot
-plt.tight_layout()
+    # Set x-axis label and format
+    axs[-1].set_xlabel("Time")
+
+    # Adjust layout and show plot
+    plt.tight_layout()
+    # plt.show()
 
 # %%
 
+if hv_vs_time:
+    fig, ax = plt.subplots(figsize=(10, 6))  # Single plot instead of 4 subplots
 
-fig, ax = plt.subplots(figsize=(10, 6))  # Single plot instead of 4 subplots
+    if hv_col in data_resampled and not reduced_field:
+        ax.plot(data_resampled.index, data_resampled[hv_col], label=f"{label_hv} {units_hv}", color='green', marker="o", linestyle="-")
+        ax.set_ylabel(f"{label_hv} {units_hv}")
+        ax.set_title("HV Over Time")
 
-if hv_col in data_resampled and not reduced_field:
-    ax.plot(data_resampled.index, data_resampled[hv_col], label=f"{label_hv} {units_hv}", color='green', marker="o", linestyle="-")
-    ax.set_ylabel(f"{label_hv} {units_hv}")
-    ax.set_title("HV Over Time")
+    elif hv_reduced in data_resampled and reduced_field:
+        ax.plot(data_resampled.index, data_resampled[hv_reduced], label=f"{label_hv} {units_hv}", color='green', marker="o", linestyle="-")
+        ax.set_ylabel(f"{label_hv} {units_hv}")
+        ax.set_title("Reduced HV Over Time")
 
-elif hv_reduced in data_resampled and reduced_field:
-    ax.plot(data_resampled.index, data_resampled[hv_reduced], label=f"{label_hv} {units_hv}", color='green', marker="o", linestyle="-")
-    ax.set_ylabel(f"{label_hv} {units_hv}")
-    ax.set_title("Reduced HV Over Time")
+    ax.set_xlabel("Time")
+    ax.grid(True)
+    ax.legend()
 
-ax.set_xlabel("Time")
-ax.grid(True)
-ax.legend()
+    plt.tight_layout()
+    # plt.show()
 
-plt.tight_layout()
-plt.show()
+if not plot_vs_hv and not plot_vs_time and not hv_vs_time:
+    print("No plots selected. Exiting...")
+    exit(0)
+
+# Show the plots (non-blocking)
+plt.show(block=False)
+
+# Wait for the user to press any key in the terminal
+print("\nPlots are displayed. Press any key in the terminal to exit...")
+input()
+
+# Close all figures after the key press
+plt.close('all')
+# %%
