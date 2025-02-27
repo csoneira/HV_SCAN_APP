@@ -111,4 +111,3 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 For questions or feedback, please contact:
 - **C. Soneira-Landín**: csoneira@ucm.es
 - **GitHub**: [csoneira](https://github.com/csoneira)
-```
