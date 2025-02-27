@@ -123,7 +123,7 @@ def download_file(station_number):
     file_links = {}
     try:
         # config_file_path = 
-        with open("/home/cayesoneira/HV_SCAN_APP/CONFIG/drive_links.txt", "r") as f:
+        with open(os.path.expanduser("~/HV_SCAN_APP/CONFIG/drive_links.txt"), "r") as f:
             for line in f:
                 # print(line)
                 parts = line.strip().split()  # Split by spaces
