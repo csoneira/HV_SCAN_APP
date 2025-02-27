@@ -15,9 +15,6 @@ This repository contains a Python script for analyzing High Voltage (HV) scan da
 ## Features
 
 - **Data Loading and Filtering**: Loads HV scan data from CSV files and filters it based on user-specified date ranges.
-- **Reduced Field Calculations**: Supports reduced field calculations for normalized HV values.
-- **Efficiency and Streamer Analysis**: Calculates and visualizes efficiency and streamer percentages for each plane.
-- **Pressure and Temperature Tracking**: Plots pressure and temperature data over time.
 - **Interactive CLI**: Provides an interactive command-line interface for user input.
 - **Visualizations**: Generates plots for HV vs. efficiency, streamer percentages, pressure, temperature, and more.
 - **Google Drive Integration**: Downloads data files from Google Drive if they are missing or outdated.
@@ -48,32 +45,26 @@ HV_SCAN_APP/
 
 ### Prerequisites
 - Python 3.x
-- Required Python packages: `numpy`, `pandas`, `matplotlib`, `gdown`
 
 ### Steps
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/csoneira/HV_SCAN_APP.git
-   cd HV_SCAN_APP
-   ```
+      ```bash
+      git clone https://github.com/csoneira/HV_SCAN_APP.git
+      cd HV_SCAN_APP
+      ```
 
-2. Install dependencies using:
-   ```bash
-   pip install -r requirements.list
-   ```
-
-3. Ensure the `DATA` and `CONFIG` directories are set up correctly:
-   - Place station-specific CSV files in the `DATA/MINGO0X/` directories.
-   - Add Google Drive links for each station in `CONFIG/drive_links.txt` (one link per line, formatted as `station_number URL`).
-
+2. Install Python dependencies using:
+      ```bash
+      pip install -r requirements.list
+      ```
 ---
 
 ## Usage
 
-Run the script from the command line:
-```bash
-python hv_scan_analysis.py
-```
+Run the script from the command line from inside the HV_SCAN_APP directory:
+      ```bash
+      python3 hv_scan_analysis.py
+      ```
 
 ### User Inputs
 - **Station Number**: Enter the station number (1-4).
@@ -83,10 +74,8 @@ python hv_scan_analysis.py
 
 ### Example Workflow
 1. The script will prompt for user inputs.
-2. It will load the data for the specified station and date range.
-3. If the data file is missing or outdated, it will download it from Google Drive.
-4. The script will perform calculations and generate the requested plots.
-5. Press any key in the terminal to exit after viewing the plots.
+2. If the data file is missing or outdated, it will download it from Google Drive.
+3. The script will perform calculations and generate the requested plots.
 
 ---
 
@@ -121,18 +110,3 @@ For questions or feedback, please contact:
 - **C. Soneira-Landín**: csoneira@ucm.es
 - **GitHub**: [csoneira](https://github.com/csoneira)
 ```
-
----
-
-### Key Sections:
-1. **Features**: Highlights the main functionalities of the script.
-2. **Repository Structure**: Explains the directory layout and file organization.
-3. **Installation**: Provides step-by-step instructions for setting up the environment.
-4. **Usage**: Describes how to run the script and interact with it.
-5. **Configuration**: Explains how to set up the `drive_links.txt` file and data directories.
-6. **License**: Specifies the GNU GPL v3.0 license.
-7. **Contributing**: Encourages contributions from the community.
-8. **Acknowledgments**: Credits the libraries and tools used.
-9. **Contact**: Provides contact information for questions or feedback.
-
-This README is designed to be clear and comprehensive, making it easy for users and contributors to understand and use your repository. Let me know if you need further adjustments!
